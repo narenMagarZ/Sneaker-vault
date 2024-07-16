@@ -19,7 +19,7 @@ export default function App() {
             Discover
           </Link>
         </div>
-        <img className="" src="posters/model1.png" alt="" />
+        <img className="animate-b" src="posters/model1.png" alt="" />
       </div>
       <div className="flex text-gray-700 p-4 items-center flex-col">
         <div className="flex flex-col gap-y-2">
