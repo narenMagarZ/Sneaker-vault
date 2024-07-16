@@ -107,7 +107,7 @@ const productResolvers = {
     },
     getCartItems: async (_: any,__:any,ctx:any) => {
       const user = ctx.user
-      return await prisma.cart.findMany({
+      const items =  await prisma.cart.findMany({
         where: {
           userId: user.id,
         },
@@ -121,6 +121,8 @@ const productResolvers = {
           },
         },
       });
+      console.log(items)
+      return items
     },
     getCartValue: async (_: any, __: any, ctx: any) => {
       const user = ctx.user
@@ -137,13 +139,12 @@ const productResolvers = {
       args: {
         products: { id: string; quantity: number }[];
       },
-      context: any,
+      ctx: any,
     ) => {
-      const token = context.token.split("Bearer")[1];
-      const payload = verifyJWT(token.trim()) as User;
-      console.log(args.products);
+      const user = ctx.user
       const checkoutToken = uuidv4();
-      const url = `${payload.id}-${checkoutToken}`;
+      const url = `${user.id}-${checkoutToken}`;
+      console.log(url,'sesion url')
       await redis.set(
         `checkout-products-${url}`,
         JSON.stringify(args.products),
@@ -256,6 +257,15 @@ const productResolvers = {
         })
         return ans
     },
+    getOrderConfirmation:async(_:any,args:{sessionId:string},ctx:any)=>{
+      const user = ctx.user
+      const value = await redis.get(`order-confirmation-session-${user.id}-${args.sessionId}`)
+      if(!value){
+        throw new Error('')
+      }
+      const order = JSON.parse(value)
+      return {...order}
+    }
   },
   Mutation: {
     updateCheckoutForm: async (_: any, args: any, ctx: any) => {
@@ -331,6 +341,7 @@ const productResolvers = {
     },
     updateCart:async(_:any,args:{productId:number,quantity?:number},ctx:any)=>{
       const user = ctx.user
+      console.log(args,'args')
       const item = await prisma.cart.findFirst({
         where:{
           productId:args.productId,
@@ -338,14 +349,16 @@ const productResolvers = {
         }
       })
       if(item) {
-        if(args.quantity && args.quantity < 1) {
-          return false
+        let quantityStep = 1
+        if(args.quantity && args.quantity === -1){
+          if(item.quantity>1)
+            quantityStep = -1
         }
         await prisma.cart.update({
           where:{id:item.id},
           data:{
             quantity:args.quantity ? 
-            args.quantity + item.quantity: 1 + item.quantity
+            args.quantity + item.quantity: quantityStep + item.quantity
           }
         })
         return true
