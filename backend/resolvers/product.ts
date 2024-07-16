@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { verifyJWT } from "../utils";
-import bcrypt from 'bcryptjs'
+import bcrypt from "bcryptjs";
 import { User } from "../types";
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
@@ -9,17 +9,18 @@ const prisma = new PrismaClient();
 
 const productResolvers = {
   Query: {
-    getProducts: async (_:any,args:{first:number,after:string}) => {
-      const take = args.first || 8
-      const cursor = args.after ? {id:parseInt(args.after)} : {
-        id:1
-      }
+    getProducts: async (_: any, args: { first: number; after: string }) => {
+      const take = args.first || 8;
+      const cursor = args.after
+        ? { id: parseInt(args.after) }
+        : {
+            id: 1,
+          };
       const results = await prisma.product.findMany({
-       ...(
-          cursor && {
-            skip:1,
-            cursor
-      }),
+        ...(cursor && {
+          skip: 1,
+          cursor,
+        }),
         select: {
           id: true,
           name: true,
@@ -32,32 +33,32 @@ const productResolvers = {
             take: 1,
           },
         },
-        take
+        take,
       });
-      if(results.length === 0){
+      if (results.length === 0) {
         return {
-          products:[],
-          metaData:{
-            lastCursor:null,
-            hasNextPage:false
-          }
-        }
+          products: [],
+          metaData: {
+            lastCursor: null,
+            hasNextPage: false,
+          },
+        };
       }
-      const cursorValue = results[results.length - 1].id
+      const cursorValue = results[results.length - 1].id;
       const nextPage = await prisma.product.findMany({
-        skip:1,
-        cursor:{
-          id:cursorValue
+        skip: 1,
+        cursor: {
+          id: cursorValue,
         },
-        take
-      })
+        take,
+      });
       return {
-        products:[...results],
-        metaData:{
-          lastCursor:cursorValue,
-          hasNextPage:nextPage.length > 0
-        }
-      }
+        products: [...results],
+        metaData: {
+          lastCursor: cursorValue,
+          hasNextPage: nextPage.length > 0,
+        },
+      };
     },
     getProduct: async (_: any, args: { id: number }) => {
       return await prisma.product.findFirst({
@@ -105,9 +106,9 @@ const productResolvers = {
         },
       });
     },
-    getCartItems: async (_: any,__:any,ctx:any) => {
-      const user = ctx.user
-      const items =  await prisma.cart.findMany({
+    getCartItems: async (_: any, __: any, ctx: any) => {
+      const user = ctx.user;
+      const items = await prisma.cart.findMany({
         where: {
           userId: user.id,
         },
@@ -121,11 +122,11 @@ const productResolvers = {
           },
         },
       });
-      console.log(items)
-      return items
+      console.log(items);
+      return items;
     },
     getCartValue: async (_: any, __: any, ctx: any) => {
-      const user = ctx.user
+      const user = ctx.user;
       const result = await prisma.cart.aggregate({
         _sum: {
           quantity: true,
@@ -141,10 +142,10 @@ const productResolvers = {
       },
       ctx: any,
     ) => {
-      const user = ctx.user
+      const user = ctx.user;
       const checkoutToken = uuidv4();
       const url = `${user.id}-${checkoutToken}`;
-      console.log(url,'sesion url')
+      console.log(url, "sesion url");
       await redis.set(
         `checkout-products-${url}`,
         JSON.stringify(args.products),
@@ -154,7 +155,7 @@ const productResolvers = {
       return `http://localhost:3000/checkout/${url}`;
     },
     getCheckoutForm: async (_: any, __: { sessionId: string }, ctx: any) => {
-      const user = ctx.user
+      const user = ctx.user;
       return await prisma.checkoutSession.findFirst({
         where: {
           userId: user.id,
@@ -171,11 +172,15 @@ const productResolvers = {
         },
       });
     },
-    getOrderSummary: async (_: any, {sessionId}: { sessionId: string }, ctx: any) => {
-      const user = ctx.user
-      const userId = sessionId.split('-')[0]
-      if(parseInt(userId) !== user.id){
-        throw new Error('Authorization required')
+    getOrderSummary: async (
+      _: any,
+      { sessionId }: { sessionId: string },
+      ctx: any,
+    ) => {
+      const user = ctx.user;
+      const userId = sessionId.split("-")[0];
+      if (parseInt(userId) !== user.id) {
+        throw new Error("Authorization required");
       }
       const value = await redis.get(`checkout-products-${sessionId}`);
       if (!value) {
@@ -222,7 +227,7 @@ const productResolvers = {
       };
     },
     getProfile: async (_: any, __: any, ctx: any) => {
-      const user = ctx.user
+      const user = ctx.user;
       return await prisma.user.findFirst({
         where: { id: user.id },
         select: {
@@ -235,54 +240,73 @@ const productResolvers = {
         },
       });
     },
-    getOrders:async(_:any,__:any,ctx:any)=>{
-     const user = ctx.user
-      const ans =  await prisma.order.findMany({
-        where:{
-          userId:user.id
+    getOrders: async (_: any, __: any, ctx: any) => {
+      const user = ctx.user;
+      const ans = await prisma.order.findMany({
+        where: {
+          userId: user.id,
         },
-        include:{
-          items:{
-            include:{
-              product:{
-                include:{
-                  images:{
-                    where:{url:{contains:'p1'}}
-                  }
-                }
-              }
-            }
-          }
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  images: {
+                    where: { url: { contains: "p1" } },
+                  },
+                },
+              },
+            },
+          },
         },
-        })
-        return ans
+      });
+      return ans;
     },
-    getOrderConfirmation:async(_:any,args:{sessionId:string},ctx:any)=>{
-      const user = ctx.user
-      const value = await redis.get(`order-confirmation-session-${user.id}-${args.sessionId}`)
-      if(!value){
-        throw new Error('')
+    getOrderConfirmation: async (
+      _: any,
+      args: { sessionId: string },
+      ctx: any,
+    ) => {
+      const user = ctx.user;
+      const s = args.sessionId.split('-')
+      const orderId = s[0]
+      const userId = s[s.length-1]
+      if(user.id !== parseInt(userId)){
+        throw new Error('Authorization required')
       }
-      const order = JSON.parse(value)
-      return {...order}
-    }
+      const order = await prisma.order.findFirst({
+        where:{id:parseInt(orderId),userId:parseInt(userId)},
+        include:{
+          user:true
+        }
+      })
+      if(order){
+        return {
+          id:order.id,
+          email:order.user.email,
+          total:order.total
+        }
+      } else {
+        throw new Error('Authorization required')
+      }
+    },
   },
   Mutation: {
     updateCheckoutForm: async (_: any, args: any, ctx: any) => {
-      const user = ctx.user
+      const user = ctx.user;
       const { discountCode, ...formData } = args;
       const checkoutSession = await prisma.checkoutSession.findFirst({
-        where:{
-          userId:user.id
-        }
-      })
-      if(checkoutSession) {
+        where: {
+          userId: user.id,
+        },
+      });
+      if (checkoutSession) {
         await prisma.checkoutSession.update({
-          where:{
-            id:checkoutSession.id
+          where: {
+            id: checkoutSession.id,
           },
-          data:{...formData}
-        })
+          data: { ...formData },
+        });
       } else {
         await prisma.checkoutSession.create({
           data: { ...formData, userId: user.id },
@@ -290,89 +314,97 @@ const productResolvers = {
       }
       return true;
     },
-    updateProfile: async (_: any, args: {
-      email:string,
-      firstName:string,
-      lastName:string
-      address:string
-      dateOfBirth:string
-    }, ctx: any) => {
-      const user = ctx.user
-      await prisma.user.update({
-        where:{
-          id:user.id
-        },
-        data:{
-          ...args
-        }
-      })
-      return true
-    },
-    deleteItemFromCart:async(_:any,args:any,ctx:any)=>{
-      const {itemId} = args
-      await prisma.cart.delete({
-        where:{id:itemId}
-      })
-      return true
+    updateProfile: async (
+      _: any,
+      args: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        address: string;
+        dateOfBirth: string;
       },
-    updatePassword:async(_:any,args:any,ctx:any)=>{
-      const user = ctx.user
+      ctx: any,
+    ) => {
+      const user = ctx.user;
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          ...args,
+        },
+      });
+      return true;
+    },
+    deleteItemFromCart: async (_: any, args: any, ctx: any) => {
+      const { itemId } = args;
+      await prisma.cart.delete({
+        where: { id: itemId },
+      });
+      return true;
+    },
+    updatePassword: async (_: any, args: any, ctx: any) => {
+      const user = ctx.user;
       const cUser = await prisma.user.findFirst({
-        where:{id:user.id}
-      })
-      
-      if(cUser){
-        const {currentPassword,newPassword,confirmPassword} = args
-        const isMatched = await bcrypt.compare(currentPassword,cUser.password)
-        if(isMatched && (newPassword === confirmPassword)) {
-          const salt = await bcrypt.genSalt()
-          const hashedPassword = await bcrypt.hash(newPassword,salt)
+        where: { id: user.id },
+      });
+
+      if (cUser) {
+        const { currentPassword, newPassword, confirmPassword } = args;
+        const isMatched = await bcrypt.compare(currentPassword, cUser.password);
+        if (isMatched && newPassword === confirmPassword) {
+          const salt = await bcrypt.genSalt();
+          const hashedPassword = await bcrypt.hash(newPassword, salt);
           await prisma.user.update({
-            where:{id:user.id},
-            data:{
-              password:hashedPassword
-            }
-          })
-          return true
-        } else throw new Error('Unauthorized')
+            where: { id: user.id },
+            data: {
+              password: hashedPassword,
+            },
+          });
+          return true;
+        } else throw new Error("Unauthorized");
       } else {
-        throw new Error('User not found')
+        throw new Error("User not found");
       }
     },
-    updateCart:async(_:any,args:{productId:number,quantity?:number},ctx:any)=>{
-      const user = ctx.user
-      console.log(args,'args')
+    updateCart: async (
+      _: any,
+      args: { productId: number; quantity?: number },
+      ctx: any,
+    ) => {
+      const user = ctx.user;
+      console.log(args, "args");
       const item = await prisma.cart.findFirst({
-        where:{
-          productId:args.productId,
-          userId:user.id
-        }
-      })
-      if(item) {
-        let quantityStep = 1
-        if(args.quantity && args.quantity === -1){
-          if(item.quantity>1)
-            quantityStep = -1
+        where: {
+          productId: args.productId,
+          userId: user.id,
+        },
+      });
+      if (item) {
+        let quantityStep = 1;
+        if (args.quantity && args.quantity === -1) {
+          if (item.quantity > 1) quantityStep = -1;
         }
         await prisma.cart.update({
-          where:{id:item.id},
-          data:{
-            quantity:args.quantity ? 
-            args.quantity + item.quantity: quantityStep + item.quantity
-          }
-        })
-        return true
+          where: { id: item.id },
+          data: {
+            quantity: args.quantity
+              ? args.quantity + item.quantity
+              : quantityStep + item.quantity,
+          },
+        });
+        return true;
       } else {
         await prisma.cart.create({
-          data:{
-            productId:args.productId,
-            quantity:args.quantity ? args.quantity : 1,
-            userId:user.id
-          }
-        })
-        return true
+          data: {
+            productId: args.productId,
+            quantity: args.quantity ? args.quantity : 1,
+            userId: user.id,
+          },
+        });
+        return true;
       }
-    }
+    },
   },
 };
 

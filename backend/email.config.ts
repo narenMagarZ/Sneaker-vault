@@ -16,7 +16,6 @@ const oAuth2Client = new google.auth.OAuth2(
   REDIRECT_URI,
 );
 
-
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 const transportOptions: SMTPTransport.Options = {

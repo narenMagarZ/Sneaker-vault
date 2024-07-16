@@ -62,7 +62,9 @@ router.post(
         email: z.string().email(),
         password: z
           .string()
-          .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#-+<>])[A-Za-z\d@$!%*?&#-+<>]{8,}$/),
+          .regex(
+            /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#-+<>])[A-Za-z\d@$!%*?&#-+<>]{8,}$/,
+          ),
       }).parse(req.body);
       next();
     } catch (error) {
@@ -75,23 +77,4 @@ router.post(
   signin,
 );
 
-router.post(
-  "/make-order",
-  (req, res, next) => {
-    try {
-      z.object({
-        sessionId: z.string(),
-      }).parse(req.body);
-      next();
-    } catch (err) {
-      console.error("Error validating order", err);
-      return res.status(409).json({
-        success: false,
-      });
-    }
-  },
-  makeOrder,
-);
-
-router.post("/confirm-order", (req, res, next) => {}, confirmOrder);
 export default router;

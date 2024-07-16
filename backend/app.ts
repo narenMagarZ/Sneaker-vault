@@ -6,6 +6,7 @@ import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHt
 import router from "./router";
 import http from "http";
 import path from "path";
+import orderRouter from "./router/orderRouter";
 import productResolvers from "./resolvers/product";
 import { verifyJWT } from "./utils";
 import { User } from "./types";
@@ -21,6 +22,7 @@ app.use(
 );
 
 app.use("/api", router);
+app.use("/api/order", orderRouter);
 const typeDefs = `
 type Image {
     id: Int!
@@ -93,6 +95,11 @@ type Cart {
             products:[Product]
             metaData:MetaData
           }
+            type OrderConfirmation {
+              email:String!
+              total:Float!
+              id:Int!
+            }
 type Query {
     getProducts(first:Int,after:String):ProductWithMetaData
 
@@ -107,6 +114,8 @@ type Query {
     getProfile:User
 
     getOrders:[Order]
+
+    getOrderConfirmation(sessionId:String!):OrderConfirmation
 
 }
 
@@ -137,7 +146,6 @@ type Mutation {
 
     updateCart(productId:Int!,quantity:Int):Boolean
 }
-
 `;
 async function createApp() {
   const httpServer = http.createServer(app);
@@ -155,30 +163,36 @@ async function createApp() {
     express.json(),
     expressMiddleware(server, {
       context: async ({ req }) => {
-        console.log(req.body,'req.body')
-        const authenticatedQueries = ['getCartItems',
-          'updateCart',
-          'getCartValue',
-          'getOrders',
-          'getCheckoutUrl',
-          'checkoutSessionForm',
-          'udpateCheckoutForm',
-        ]
-        const {operationName} = req.body
-        if(authenticatedQueries.includes(operationName)){
-          const authorizationHeader = req.headers.authorization
-          if(!authorizationHeader){
-            throw new Error('Authentication required')
+        const authenticatedQueries = [
+          "getCartItems",
+          "updateCart",
+          "getCartValue",
+          "getOrders",
+          "getProfile",
+          "getCheckoutUrl",
+          "checkoutSessionForm",
+          "updateCheckoutForm",
+          "updatePassword",
+          "updateProfile",
+          'OrderConfirmation'
+        ];
+        const { operationName } = req.body;
+        if (authenticatedQueries.includes(operationName)) {
+          const authorizationHeader = req.headers.authorization;
+          if (!authorizationHeader) {
+            throw new Error("Authentication required");
           }
-          const token = authorizationHeader.split('Bearer')[1]
+          const token = authorizationHeader.split("Bearer")[1];
           const payload = verifyJWT(token.trim()) as User;
-        return {user:payload}
+          return { user: payload };
         }
-        return true
+        return true;
       },
     }),
   );
-  httpServer.listen(5000,()=>console.log('server is listening on port',5000))
+  httpServer.listen(5000, () =>
+    console.log("server is listening on port", 5000),
+  );
   // await new Promise<void>((resolve) => httpServer.listen(5000, resolve));
 }
 createApp();

@@ -22,8 +22,8 @@ export async function sendVerificationCode(user: string) {
     const mailInfo = await transport.sendMail({
       from: "narnemagarz98@gmail.com",
       to: user,
-      subject: "Your Verification Code",
-      html: `<p><b>${code}</b></p>`,
+      subject: "Verification Code",
+      html: `<p>Your Verification Code: <b>${code}</b></p>`,
     });
     console.log(mailInfo);
   } catch (error) {
@@ -33,8 +33,8 @@ export async function sendVerificationCode(user: string) {
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "";
 export function verifyJWT(token: string) {
-    const decodedToken =  jwt.verify(token, ACCESS_TOKEN_SECRET) 
-    return decodedToken;
+  const decodedToken = jwt.verify(token, ACCESS_TOKEN_SECRET);
+  return decodedToken;
 }
 
 export async function signJWT(payload: {}) {
@@ -44,7 +44,12 @@ export async function signJWT(payload: {}) {
   return token;
 }
 
+function checkAuth(token: string) {}
 
-function checkAuth(token:string){
-
+export async function sendOrderVerificationEmail(
+  cEmail: string,
+  orderDetail: {},
+) {
+  try {
+  } catch (error) {}
 }

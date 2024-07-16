@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import { esewaPayment, khaltiPayment } from "../utils/payment";
 import Redis from "ioredis";
 dotenv.config();
 const prisma = new PrismaClient();
@@ -8,7 +9,7 @@ const redis = new Redis();
 const LIVE_SECRET_KEY = "68791341fdd94846a146f0457ff7b455";
 export async function makeOrder(req: Request, res: Response) {
   try {
-    const { sessionId } = req.body;
+    const { sessionId, paymentOption } = req.body;
     // first check if user id and id from session id are matched
     const value = await redis.get(`checkout-products-${sessionId}`);
     if (value) {
@@ -29,7 +30,7 @@ export async function makeOrder(req: Request, res: Response) {
         },
       });
       // console.log(purchasedProducts)
-      let total = 0;
+      let total = 320;
       const updatedProducts = purchasedProducts.map((product) => {
         const quantity = products.find(
           (p: { id: number; quantity: number }) => p.id === product.id,
@@ -53,7 +54,6 @@ export async function makeOrder(req: Request, res: Response) {
         },
       });
       const orderId = newOrder.id;
-      console.log(orderId, "orderId");
       for (let { id, quantity, price } of updatedProducts) {
         await prisma.orderItem.create({
           data: {
@@ -64,34 +64,44 @@ export async function makeOrder(req: Request, res: Response) {
           },
         });
       }
-      const paymentResponse = await fetch(
-        "https://a.khalti.com/api/v2/epayment/initiate/",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `key live_secret_key_68791341fdd94846a146f0457ff7b455`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            return_url: `http://localhost:3000/order-confirm/${orderId}`,
-            website_url: "http://localhost:3000",
+      // for khalti
+      if (paymentOption === "khalti") {
+        const paymentUrl = await khaltiPayment({
+          email: "narenmagarz98@gmail.com",
+          orderId,
+          totalAmount: total,
+          userId: 4,
+        });
+        if (!paymentUrl) {
+          return res.status(500).json({
+            success: false,
+          });
+        }
+        return res.status(200).json({
+          success: true,
+          paymentUrl,
+        });
+      }
+      // for esewa
+      else {
+        const paymentMetaData = await esewaPayment(
+          {
             amount: total,
-            purchase_order_id: orderId,
-            purchase_order_name: "Purchase Sneaker",
-            customer_info: {
-              name: "ram bahadur",
-              email: "test@khalti.com",
-              phone: "9823456789",
-            },
-          }),
-        },
-      );
-      const { payment_url: paymentUrl } = await paymentResponse.json();
-      console.log(paymentUrl);
-      return res.status(200).json({
-        success: true,
-        paymentUrl,
-      });
+            deliveryFee: 320,
+            serviceCharge: 0,
+            taxFee: 0,
+          },
+          {
+            userId: 4,
+            orderId,
+            email: "narenmagarz98@gmail.com",
+          },
+        );
+        return res.status(200).json({
+          success: true,
+          paymentMetaData,
+        });
+      }
     } else {
       return res.status(409).json({
         success: false,
