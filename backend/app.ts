@@ -145,6 +145,8 @@ type Mutation {
     updatePassword(currentPassword:String!,newPassword:String!,confirmPassword:String!):Boolean
 
     updateCart(productId:Int!,quantity:Int):Boolean
+
+    changePassword(email:String!,code:String!,newPassword:String!,confirmPassword:String!):Boolean
 }
 `;
 async function createApp() {
@@ -174,17 +176,26 @@ async function createApp() {
           "updateCheckoutForm",
           "updatePassword",
           "updateProfile",
-          'OrderConfirmation'
+          'OrderConfirmation',
         ];
         const { operationName } = req.body;
         if (authenticatedQueries.includes(operationName)) {
           const authorizationHeader = req.headers.authorization;
-          if (!authorizationHeader) {
-            throw new Error("Authentication required");
+          try{
+            if(authorizationHeader){
+              const token = authorizationHeader.split("Bearer")[1];
+              if(token.trim()!=='undefined'){
+                const payload = verifyJWT(token.trim()) as User;
+                return { user: payload };
+              } else throw new Error('Unauthorized user')
+            }
+            else {
+            throw new Error('Unauthorized user ')
+            }
+          } catch(err){
+            throw new Error('Internal server error ')
+
           }
-          const token = authorizationHeader.split("Bearer")[1];
-          const payload = verifyJWT(token.trim()) as User;
-          return { user: payload };
         }
         return true;
       },

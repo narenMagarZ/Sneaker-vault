@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { verifyJWT } from "../utils";
+import { sendVerificationCode, verifyJWT } from "../utils";
 import bcrypt from "bcryptjs";
 import { User } from "../types";
 import Redis from "ioredis";
@@ -122,7 +122,6 @@ const productResolvers = {
           },
         },
       });
-      console.log(items);
       return items;
     },
     getCartValue: async (_: any, __: any, ctx: any) => {
@@ -267,6 +266,7 @@ const productResolvers = {
       args: { sessionId: string },
       ctx: any,
     ) => {
+
       const user = ctx.user;
       const s = args.sessionId.split('-')
       const orderId = s[0]
@@ -405,6 +405,22 @@ const productResolvers = {
         return true;
       }
     },
+    changePassword:async(_:any,args:{email:string,code:string,newPassword:string,confirmPassword:string})=>{
+    const userCode = await redis.get(`code-${args.email}`);
+      if(userCode !== args.code || args.newPassword !== args.confirmPassword ) {
+        return false
+    } else {
+      const salt = await bcrypt.genSalt(12)
+      const hashedPassword = await bcrypt.hash(args.newPassword,salt)
+      await prisma.user.update({
+        where:{email:args.email},
+        data:{
+          password:hashedPassword
+        }
+      })
+      return true
+    }
+    }
   },
 };
 

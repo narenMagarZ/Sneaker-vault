@@ -6,6 +6,9 @@ import { confirmOrder, makeOrder } from "../controllers/order";
 
 const router = express.Router();
 
+router.get('/test',(req,res)=>{
+  return res.json("okay")
+})
 router.get("/auth", checkAuth);
 router.post(
   "/email-verification",
@@ -33,7 +36,7 @@ router.post(
         code: z.string().regex(/^[0-9]{6}$/),
         email: z.string().email(),
         firstName: z.string().regex(/^[A-z]{3,}$/),
-        lastName: z.string().regex(/^[A-z]{3,}$/),
+        lastName: z.string().regex(/^[A-z]{2,}$/),
         password: z
           .string()
           .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/),

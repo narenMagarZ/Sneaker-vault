@@ -7,17 +7,19 @@ const prisma = new PrismaClient();
 const redis = new Redis();
 export async function emailVerification(req: Request, res: Response) {
   try {
-    const { email } = req.body;
+    const { email,type } = req.body;
     // also check in database that email is already exists or not
-    const user = await prisma.user.findFirst({
-      where: {
-        email,
-      },
-    });
-    if (user) {
-      return res.status(409).json({
-        message: "Email already exists",
+    if(type !== 'change_password'){
+      const user = await prisma.user.findFirst({
+        where: {
+          email,
+        },
       });
+      if (user) {
+        return res.status(409).json({
+          message: "Email already exists",
+        });
+      }
     }
     await sendVerificationCode(email);
     return res.status(200).json({

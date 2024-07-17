@@ -77,7 +77,7 @@ export async function khaltiPayment(metaData: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          return_url: `http://localhost:3000/order-confirm/${sessionId}`,
+          return_url: `http://localhost:3000/`,
           website_url: "http://localhost:3000",
           amount: "10000",
           purchase_order_id: "test12",

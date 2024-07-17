@@ -20,7 +20,7 @@ export async function sendVerificationCode(user: string) {
     // set expiration tme of 60 sec
     await redis.set(`code-${user}`, code, "EX", 120);
     const mailInfo = await transport.sendMail({
-      from: "narnemagarz98@gmail.com",
+      from: "narenmagarz98@gmail.com",
       to: user,
       subject: "Verification Code",
       html: `<p>Your Verification Code: <b>${code}</b></p>`,

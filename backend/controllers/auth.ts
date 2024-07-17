@@ -39,5 +39,6 @@ export default async function checkAuth(req: Request, res: Response) {
       });
   } catch (error) {
     console.error("Error authenticating user", error);
+    return res.status(500).json({message:'Internal server error'})
   }
 }
