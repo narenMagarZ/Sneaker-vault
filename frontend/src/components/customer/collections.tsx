@@ -78,7 +78,7 @@ export default function Collections() {
   }
   return (
     <div className="flex text-sm items-center justify-center">
-      <div className="grid grid-cols-3 gap-4">
+      <div className=" sm:grid-cols-2 grid md:grid-cols-3 gap-4">
         {data &&
           data.getProducts &&
           data.getProducts.products.map((product: Product, i: number) => (

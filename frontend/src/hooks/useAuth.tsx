@@ -20,13 +20,8 @@ export default function AuthProvider({children}:{children:React.ReactNode}){
       const res = await API("/auth", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log(res)
       if(res.status===200){
-        const user = {
-          id:1,
-          email:'narenmagarz98@gmail.com'
-        }
-        setUser(user)
+        setUser(res.data.user)
       } else {
         setUser(null)
       }
@@ -38,10 +33,10 @@ export default function AuthProvider({children}:{children:React.ReactNode}){
     }
 
   }
-  const logout = ()=>{
-    setUser(null)
-    window.location.href = '/signin'
-    // navigate('/',{replace:true})
+  const logout = async()=>{
+      window.localStorage.removeItem('token')
+      setUser(null)
+      window.location.href = '/signin'
   }
   useEffect(()=>{
     getAuth()

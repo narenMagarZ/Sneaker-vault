@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./app";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import { RouterProvider, BrowserRouter as Router,Routes, createBrowserRouter, Route } from "react-router-dom";
 import Product from "./components/customer/product";
 import Layout from "./layout";
 import {
@@ -14,14 +14,16 @@ import {
 import Cart from "./components/customer/cart";
 import { Provider } from "react-redux";
 import store from "./store";
-import ProtectedRoute from "./components/customer/protectedRoute";
 import Checkout from "./components/checkout";
 import Order from "./components/order";
-import PublicRoutes from "./components/publicRoutes";
 import OrderConfirmation from "./components/orderConfirmation";
+import PrivateRoute from "./components/privateRoute";
+import AuthProvider from "./hooks/useAuth";
+import Error from "./components/error";
+import ForgotPassword from "./components/forgotPassword";
 
-const CustomerSignIn = lazy(() => import("./components/customer/signIn"));
-const CustomerJoinUs = lazy(() => import("./components/customer/joinUs"));
+const SignIn = lazy(() => import("./components/customer/signIn"));
+const JoinUs = lazy(() => import("./components/customer/joinUs"));
 const Collections = lazy(() => import("./components/customer/collections"));
 const Profile = lazy(() => import("./components/customer/profile"));
 
@@ -45,53 +47,65 @@ const router = createBrowserRouter([
       {
         path: "/cart",
         element: (
-          <ProtectedRoute>
+          <PrivateRoute>
             <Cart />
-          </ProtectedRoute>
+          </PrivateRoute>
         ),
+      },
+      {
+        path:'/forgot-password',
+        element:(
+          <ForgotPassword/>
+        )
       },
       {
         path: "/profile",
         element: (
-          <ProtectedRoute>
+          <PrivateRoute>
             <Profile />
-          </ProtectedRoute>
+          </PrivateRoute>
         ),
       },
       {
         path: "/order",
         element: (
-          <ProtectedRoute>
+          <PrivateRoute>
             <Order />
-          </ProtectedRoute>
+          </PrivateRoute>
         ),
-      },
+        },
+        {
+          path: "checkout/:id",
+          element: (
+            <PrivateRoute>
+              <Checkout />
+            </PrivateRoute>
+          ),
+        },
+          {
+            path:'*',
+            element:<Error/>
+          },
       {
         path:'/order-confirm/:id',
         element:(
-          <ProtectedRoute>
+          <PrivateRoute>
             <OrderConfirmation/>
-          </ProtectedRoute>
+          </PrivateRoute>
         )
       }
     ],
   },
   {
     path: "signin",
-    element: <CustomerSignIn />,
+    element: <SignIn />,
   },
   {
     path: "joinus",
-    element: <CustomerJoinUs />,
+    element: <JoinUs />,
   },
-  {
-    path: "checkout/:id",
-    element: (
-      <ProtectedRoute>
-        <Checkout />
-      </ProtectedRoute>
-    ),
-  },
+
+
 ]);
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement,
@@ -126,12 +140,14 @@ const client = new ApolloClient({
 
 root.render(
   <React.StrictMode>
-    <Provider store={store()}>
-      <ApolloProvider client={client}>
-        <Suspense fallback={<div>loading...</div>}>
-          <RouterProvider router={router} />
-        </Suspense>
-      </ApolloProvider>
-    </Provider>
+    <AuthProvider>
+      <Provider store={store()}>
+        <ApolloProvider client={client}>
+          <Suspense fallback={<div>loading...</div>}>
+            <RouterProvider router={router} />
+          </Suspense>
+        </ApolloProvider>
+      </Provider>
+    </AuthProvider>
   </React.StrictMode>,
 );

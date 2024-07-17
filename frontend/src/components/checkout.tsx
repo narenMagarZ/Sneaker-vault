@@ -3,9 +3,11 @@ import AppLogo from "../ui/logo";
 import API from "../utils";
 import { gql, useQuery, useMutation, useLazyQuery } from "@apollo/client";
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { SetStateAction, useState } from "react";
 import Spinner from "../ui/spinner";
 import Error from "./error";
+import clsx from "clsx";
+import PaymentForm from "../utils/paymentForm";
 
 interface OrderSummary {
   total: number;
@@ -55,6 +57,7 @@ export default function Checkout() {
       sessionId: params.id,
     },
   });
+  const [paymentOption,setPaymentOption] = useState<'khalti'|'esewa'|''>('')
   if (error) {
     return <Error />;
   }
@@ -66,11 +69,11 @@ export default function Checkout() {
       <AppLogo />
       <div className="flex justify-center gap-4 flex-col lg:flex-row-reverse">
         {data && data.getOrderSummary && (
-          <OrderSummary {...data?.getOrderSummary} sessionId={params.id} />
+          <OrderSummary paymentOption={paymentOption} {...data?.getOrderSummary} sessionId={params.id} />
         )}
-        {data && data.getCheckoutForm && data.getOrderSummary && (
-          <CheckoutForm {...data?.getCheckoutForm} />
-        )}
+        {/* {d && data.getOrderSummary && ( */}
+          <CheckoutForm paymentOption={paymentOption} setPaymentOption={setPaymentOption}  {...data?.getCheckoutForm} />
+        {/* )} */}
       </div>
     </div>
   );
@@ -88,7 +91,8 @@ interface CheckoutForm {
   discountCode?: string;
 }
 
-function OrderSummary(props: OrderSummary & { sessionId?: string }) {
+type PaymentOption = 'khalti' | 'esewa' | ''
+function OrderSummary(props: OrderSummary & { sessionId?: string, paymentOption:PaymentOption }) {
   const [showSpinner, setShowSpinner] = useState(false);
 
   const APPLY_COUPON_CODE = gql`
@@ -99,6 +103,7 @@ function OrderSummary(props: OrderSummary & { sessionId?: string }) {
   const [applyDiscountCode, setApplyDiscountCode] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
   const [getDiscount] = useLazyQuery(APPLY_COUPON_CODE);
+  const [paymentMetaData,setPaymentMetaData] = useState<any>(null)
   return (
     <div className="flex-col w-full gap-y-2 flex">
       <h5 className="w-full px-2 font-semibold">Order summary</h5>
@@ -136,9 +141,6 @@ function OrderSummary(props: OrderSummary & { sessionId?: string }) {
               if (discountCode === "11111") {
                 setApplyDiscountCode((p) => !p);
               }
-              // getDiscount({
-              //     variables:{sessionId:props.sessionId}
-              // })
             }}
             type="button"
             className="bg-gray-200 px-4 py-2"
@@ -184,16 +186,29 @@ function OrderSummary(props: OrderSummary & { sessionId?: string }) {
           <div>
             <button
               onClick={async () => {
+                if(props.paymentOption===''){
+                  return ;
+                }
                 setShowSpinner(true);
                 try {
-                  const res = await API.post("/make-order", {
+                  const res = await API.post("/order/create", {
                     sessionId: props.sessionId,
+                    paymentOption:props.paymentOption
                   });
                   if (res.status === 200) {
-                    const { paymentUrl } = res.data;
-                    window.location.href = paymentUrl;
-                  } else {
-                    // throw error
+                    if(props.paymentOption==='khalti') {
+                      const { paymentUrl } = res.data;
+                      window.location.href = paymentUrl;
+
+                    } else {
+                      const {paymentMetaData} = res.data
+                      console.log(paymentMetaData)
+                      if(paymentMetaData){
+                        setPaymentMetaData(paymentMetaData)
+                      }
+                    }
+                    } else {
+
                   }
                 } catch (error) {
                 } finally {
@@ -204,6 +219,10 @@ function OrderSummary(props: OrderSummary & { sessionId?: string }) {
             >
               {showSpinner ? <Spinner /> : "Checkout"}
             </button>
+              {
+                paymentMetaData && 
+              <PaymentForm {...paymentMetaData} />
+              }
           </div>
         </div>
       </div>
@@ -211,7 +230,10 @@ function OrderSummary(props: OrderSummary & { sessionId?: string }) {
   );
 }
 
-function CheckoutForm(props: CheckoutForm) {
+function CheckoutForm(props: CheckoutForm & {
+  setPaymentOption:React.Dispatch<SetStateAction<'khalti'|'esewa'|''>>
+  paymentOption:'khalti'|'esewa'|''
+}) {
   const { discountCode, ...checkoutForm } = props;
   const {
     register,
@@ -391,9 +413,28 @@ function CheckoutForm(props: CheckoutForm) {
           </div>
         </div>
         <div className="flex flex-col gap-y-2">
-          <h5 className="font-semibold">Payment</h5>
-          <div>
-            <img className="w-[80px]" src={"/posters/khalti.png"} />
+          <h5 className="font-semibold">Payment<span className="text-xs text-gray-500 font-normal">&nbsp;(select any one option)</span></h5>
+          <div className="flex gap-x-2">
+            <button
+            className={clsx('border',{
+              'border-blue-700':props.paymentOption==='khalti',
+            })}
+            type="button"
+            onClick={()=>{
+              props.setPaymentOption('khalti')
+            }}>
+              <img className="w-[80px]" src={"/posters/khalti.png"} />
+            </button>
+            <button 
+              className={clsx('border',{
+                'border-blue-700':props.paymentOption==='esewa',
+              })}
+            type="button"
+            onClick={()=>{
+              props.setPaymentOption('esewa')
+            }}>
+              <img className="w-[80px]" src={'/posters/esewa.png'} />
+            </button>
           </div>
         </div>
         <div>

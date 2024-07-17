@@ -1,9 +1,11 @@
 import clsx from "clsx";
 import React, { SetStateAction, useState } from "react";
-import { FieldErrors, UseFormRegister, useForm } from "react-hook-form";
+import { FieldErrors, UseFormRegister, useForm, UseFormGetFieldState, UseFormGetValues } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../../utils";
 import AppLogo from "../../ui/logo";
+import { useAuth } from "../../hooks/useAuth";
+import { toast } from "sonner";
 
 export default function JoinUs() {
   const [step, setStep] = useState(1);
@@ -14,7 +16,7 @@ export default function JoinUs() {
         <AppLogo />
       </div>
       {step === 1 ? (
-        <EmailVerificationForm setEmail={setEmail} setStep={setStep} />
+        <EmailVerificationForm email={email} setEmail={setEmail} setStep={setStep} />
       ) : (
         <UserJoinForm email={email} setStep={setStep} />
       )}
@@ -24,14 +26,24 @@ export default function JoinUs() {
 
 function EmailVerificationForm(props: {
   setStep: React.Dispatch<SetStateAction<number>>;
+  email:string
   setEmail: React.Dispatch<SetStateAction<string>>;
 }) {
+  const auth = useAuth()
+  if(auth) {
+    window.location.href = '/'
+  }
   const [animateEmail, setAnimateEmail] = useState(false);
   const {
     register,
     formState: { errors },
     handleSubmit,
-  } = useForm<{ email: string }>();
+    getValues
+  } = useForm<{ email: string }>({
+    defaultValues:{
+      email:props.email
+    }
+  });
   async function onSubmit(data: { email: string }) {
     try {
       const res = await API("/email-verification", {
@@ -39,8 +51,8 @@ function EmailVerificationForm(props: {
         data: { email: data.email },
       });
       if (res.status === 200) {
-        props.setEmail(data.email);
-        props.setStep(2);
+          props.setEmail(data.email);
+          props.setStep(2);
       }
     } catch (err) {
       console.error("Error ");
@@ -58,7 +70,7 @@ function EmailVerificationForm(props: {
                 "flex items-center justify-center transition duration-200 px-1 justify-center absolute",
                 {
                   "bottom-[45px] text-xs": animateEmail,
-                  "inset-0 ": !animateEmail,
+                  "inset-0 ": !animateEmail && !getValues('email') ,
                 },
               )}
             >
@@ -99,6 +111,7 @@ function EmailVerificationForm(props: {
           </Link>
         </p>
         <div className="text-end">
+        
           <button
             type="submit"
             className="bg-gray-700 hover:bg-gray-800 text-white text-sm rounded p-2"
@@ -106,6 +119,10 @@ function EmailVerificationForm(props: {
             Continue
           </button>
         </div>
+          <p className="text-gray-600">
+          Already have an account?&nbsp;
+          <Link className="hover:underline" to={'/signin'} >Sign in</Link>
+          </p>
       </form>
     </div>
   );
@@ -113,6 +130,7 @@ function EmailVerificationForm(props: {
 
 interface UserJoinForm {
   code: string;
+  email:string
   firstName: string;
   lastName: string;
   password: string;
@@ -129,17 +147,22 @@ function UserJoinForm(props: {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<UserJoinForm>();
   async function onSubmit(data: UserJoinForm) {
-    console.log(data);
     try {
       const res = await API.post("join", {
         ...data,
         email: props.email,
       });
       if (res.status === 201) {
+        const {token} = res.data
+        if(token) {
+          window.localStorage.setItem('token',token)
         navigate("/collections", { replace: true });
+        }
+        toast.error('Failed to join, try again later')
       }
     } catch (err) {}
   }
@@ -163,6 +186,7 @@ function UserJoinForm(props: {
         </div>
         <div className="flex flex-col gap-y-4">
           <AnimatedInput
+          getValues={getValues}
             errors={errors}
             name="code"
             label="Code"
@@ -170,6 +194,8 @@ function UserJoinForm(props: {
           />
           <div className="flex items-center gap-x-2">
             <AnimatedInput
+          getValues={getValues}
+
               errors={errors}
               label="First Name"
               name="firstName"
@@ -177,6 +203,8 @@ function UserJoinForm(props: {
             />
             <AnimatedInput
               errors={errors}
+          getValues={getValues}
+
               label="Last Name"
               name="lastName"
               register={register}
@@ -185,6 +213,8 @@ function UserJoinForm(props: {
           <div>
             <AnimatedInput
               errors={errors}
+          getValues={getValues}
+
               label="Password"
               name="password"
               register={register}
@@ -203,6 +233,8 @@ function UserJoinForm(props: {
           <div>
             <AnimatedInput
               errors={errors}
+          getValues={getValues}
+
               label="Address"
               name="address"
               register={register}
@@ -211,6 +243,7 @@ function UserJoinForm(props: {
           <div>
             <div className="relative">
               <input
+              className="w-full border p-2"
                 type="date"
                 {...register("dateOfBirth", {
                   required: "Date of Birth is required",
@@ -254,8 +287,11 @@ function AnimatedInput(props: {
   errors: FieldErrors<UserJoinForm>;
   label: string;
   name: keyof UserJoinForm;
+  getValues:UseFormGetValues<UserJoinForm>
+
 }) {
-  const [animateEmail, setAnimateEmail] = useState(false);
+  const [animateLabel, setAnimateLabel] = useState(false);
+  console.log(!animateLabel && !props.getValues(props.name))
   return (
     <div>
       <div className="relative">
@@ -264,8 +300,8 @@ function AnimatedInput(props: {
           className={clsx(
             "flex items-center justify-center transition duration-200 px-1 justify-center absolute",
             {
-              "bottom-[45px] text-xs": animateEmail,
-              "inset-0 ": !animateEmail,
+              "bottom-[45px] text-xs": animateLabel,
+              "inset-0 ": !animateLabel && !props.getValues(props.name),
             },
           )}
         >
@@ -273,14 +309,13 @@ function AnimatedInput(props: {
         </div>
         <input
           onFocus={() => {
-            setAnimateEmail(true);
+            setAnimateLabel(true);
           }}
           className="border w-full text-sm rounded p-4"
           {...props.register(props.name, {
             required: `${props.label} is required`,
-
-            onBlur: () => {
-              setAnimateEmail(false);
+            onBlur: (e) => {
+              setAnimateLabel(false);
             },
           })}
         />

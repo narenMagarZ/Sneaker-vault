@@ -9,18 +9,7 @@ export default function BuyBtn(props: {
   );
 
   useEffect(() => {
-    // if (props.products.length > 0) {
-
-      // const newProducts = props.products.map(({id,quantity}) =>{
-      //   return {
-      //     id,
-      //     quantity
-      //   }
-      // })
-      // setProducts(newProducts);
-    // } else {
       setProducts(props.products);
-    // }
   }, [props.products]);
   const GET_CHECKOUT_URL = gql`
     query getCheckoutUrl($products: [CheckoutProduct]) {

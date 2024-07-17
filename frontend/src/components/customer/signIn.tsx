@@ -1,7 +1,8 @@
 import { useForm } from "react-hook-form";
 import AppLogo from "../../ui/logo";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import API from "../../utils";
+import { useAuth } from "../../hooks/useAuth";
 
 interface SignInForm {
   email: string;
@@ -9,7 +10,10 @@ interface SignInForm {
 }
 
 export default function SignIn() {
-  const navigate = useNavigate();
+  const auth = useAuth()
+  if(auth) {
+    window.location.href = '/'
+  }
   const {
     register,
     handleSubmit,
@@ -22,7 +26,7 @@ export default function SignIn() {
         const { token } = res.data;
         if (token) {
           window.localStorage.setItem("token", token);
-          navigate("/collections", { replace: true });
+          window.location.href = '/collections'
         }
       }
     } catch (error) {}
@@ -52,6 +56,7 @@ export default function SignIn() {
         <div className="flex flex-col gap-y-1">
           <label>Password</label>
           <input
+          type="password"
             className="border rounded p-2"
             {...register("password", {
               required: "Password is required",
@@ -64,7 +69,11 @@ export default function SignIn() {
               </span>
             </p>
           )}
+          <div className="text-end">
+          <Link className="text-xs text-gray-600 hover:underline"  to={'/forgot-password'} >Forgot password?</Link>
         </div>
+        </div>
+        
         <div className="text-center">
           <button
             className="bg-gray-700 rounded text-white p-2 px-4 hover:bg-gray-800"
@@ -73,6 +82,7 @@ export default function SignIn() {
             Sign In
           </button>
         </div>
+       
         <div>
           <p className="">
             Already have an account?{" "}

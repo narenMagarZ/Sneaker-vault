@@ -10,7 +10,6 @@ export default function ProtectedRoute({children}:{children:React.ReactNode}){
   console.log(auth,'auth')
   if(!auth){
     // window.location.href = '/signin'
-    // return <Navigate to={'/signin'} />
   }
   return (
     <>{children}</>

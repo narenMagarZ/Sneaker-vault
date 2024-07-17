@@ -1,5 +1,6 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
+import Error from "./error";
 
 interface Product {
   name: string;
@@ -48,7 +49,7 @@ export default function Order() {
     getOrders: Order[];
   }>(GET_ORDERS);
   if (error) {
-    return <div>Error</div>;
+    return <Error/>
   }
   if (loading) {
     return <div>Loading...</div>;

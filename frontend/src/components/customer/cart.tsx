@@ -5,6 +5,7 @@ import { addToCart, removeFromCart } from "../../features/cart/cartslice";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import BuyBtn from "../../ui/buyBtn";
 import Delete from "../../ui/delete";
+import Error from "../error";
 export default function Cart() {
   const GET_CART_ITEMS = gql`
     query getCartItems {
@@ -69,17 +70,23 @@ export default function Cart() {
   },[data,cartI])
 
   if (error) {
-    return <div>Error</div>;
+    return <Error/>;
   }
   if (loading) {
     return <div>Loading</div>;
   }
   return (
-    <div className="flex flex-col gap-y-4 text-sm items-center justify-center">
-      <div></div>
+    <div className="flex p-4 flex-col gap-y-4 text-sm items-center justify-center">
+      {
+        cartI && cartI.length === 0  && 
+        <div>
+          <h5 className="font-semibold text-white bg-gray-700 px-4 py-2">Your cart is empty</h5>
+      </div>
+      }
+        
       <div className="flex w-full max-w-[800px] flex-col gap-y-4">
         {cartI &&
-          cartI.map(({ id, quantity, product }, i) => (
+          cartI?.map(({ id, quantity, product }, i) => (
             <ProductCartCard
               id={id}
               quantity={quantity}
